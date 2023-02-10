@@ -3,8 +3,12 @@ import glob
 from pikepdf import Pdf, PdfImage
 from constants import IMAGES_DIRECTORY
 
+FOLDER_NAME = "pdfs"
+if not os.path.exists(FOLDER_NAME):
+    os.mkdir(FOLDER_NAME)
 
-for filename in glob.glob(f"pdfs/*.pdf"):
+
+for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
     pdf = Pdf.open(filename)
 
     year = int("20" + filename[filename.index("_subj_rpt") - 2: filename.index("_subj_rpt")])
