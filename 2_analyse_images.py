@@ -1,33 +1,39 @@
-import csv
 from PIL import Image
 
 
 class ImageParser:
     def __init__(self, filename: str):
         self.image = Image.open(filename)
-        self.image_hsv = self.image.convert("HSV")
+        self.image_quantized = self.quantize_image()
+
         self.y_axis = 0     # the horizontal position of the y-axis
         self.x_axis = 0     # the vertical position of the x-axis
 
-        self.locate_y_axis()
+        # self.generate_false_colour()
 
     @staticmethod
     def is_black_pixel(pixel: tuple):
-        return pixel[0] < 2 and pixel[1] < 2 and pixel[2] > 250
+        return pixel[0] < 2 and pixel[1] < 2 and pixel[2] <= 75
 
     @staticmethod
     def is_blue_pixel(pixel: tuple):
         return 140 < pixel[0] < 160 and 50 < pixel[1] < 120 and pixel[2] > 200
 
+    def quantize_image(self):
+        image_palette = Image.new("P", (3, 1))
+        image_palette.putpalette((
+            0, 0, 0,
+            255, 255, 255,
+            145, 189, 228
+        ))
+
+        new_image = self.image.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
+
+        # new_image.save("quantise.png")
+        return new_image
+
     def locate_y_axis(self):
-        with open("output.csv", 'w') as file:
-            writer = csv.writer(file)
-            for y in range(self.image.height):
-                row = []
-                for x in range(self.image.width):
-                    pixel = self.image_hsv.getpixel((x, y))
-                    row.append(pixel)
-                writer.writerow([*row, "\n"])
+        pass
 
     """Find position of y-axis"""
 
