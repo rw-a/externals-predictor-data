@@ -8,8 +8,8 @@ class ImageParser:
         self.WHITE_PIXEL = (255, 255, 255)  # index of 0
         self.BLACK_PIXEL = (0, 0, 0)        # index of 1
         self.BLUE_PIXEL = (145, 189, 228)   # index of 2
-        self.BLUE_SEPARATOR_PIXEL_1 = (188, 229, 255)   # is considered white but is useful for separating bars
-        self.BLUE_SEPARATOR_PIXEL_2 = (172, 207, 237)
+        self.BLUE_SEPARATOR_PIXEL_1 = (172, 207, 237)   # darker than 2
+        self.BLUE_SEPARATOR_PIXEL_2 = (188, 229, 255)   # is considered white but is useful for separating bars
 
         """Init"""
         self.filename = filename
@@ -112,7 +112,7 @@ class ImageParser:
 
         x = self.y_axis
         while x < self.image.width:
-            y = bar_y_start + 1 if bar_found else self.x_axis - 1   # once bar found, start searching from known start
+            y = bar_y_start + 1 if bar_found else self.x_axis - 5   # once bar found, start searching from known start
             while y > 0:
                 pixel = self.image.getpixel((x, y))
                 if pixel == 2:  # if pixel is blue
@@ -133,7 +133,8 @@ class ImageParser:
                         break
                     elif y == bar_y_start:     # if start of the next column should be a blue but isn't, the bar is done
                         bar_x_middle = round((bar_x_start + x) / 2)
-                        self.bars[bar_x_middle] = bar_max_height
+                        # self.bars[bar_x_middle] = bar_max_height
+                        self.bars[bar_x_middle] = (bar_y_start, bar_max_height)     # for debugging when graphing
                         bar_found = False
                         bar_x_start = 0
                         bar_y_start = 0
@@ -143,6 +144,12 @@ class ImageParser:
             x += 1
         print(self.bars)
 
+        new_image = Image.new("RGB", (self.image.width, self.image.height))
+        for bar, position in self.bars.items():
+            for i in range(position[1]):
+                new_image.putpixel((bar, position[0] - i), (255, 0, 0))
+        new_image.save("bars.png")
+
     """Determine total height of all bars"""
 
     """Convert height of each bar to percentage"""
@@ -150,4 +157,4 @@ class ImageParser:
     """Get percentage of each raw score"""
 
 
-image = ImageParser("pdfs/snr_chemistry_21_subj_rpt/Externals-page09-img01.jpg")
+image = ImageParser("pdfs/snr_chemistry_21_subj_rpt/Total-page10-img01.jpg")
