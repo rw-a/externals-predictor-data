@@ -8,6 +8,8 @@ class ImageParser:
         self.WHITE_PIXEL = (255, 255, 255)  # index of 0
         self.BLACK_PIXEL = (0, 0, 0)        # index of 1
         self.BLUE_PIXEL = (145, 189, 228)   # index of 2
+        self.BLUE_SEPARATOR_PIXEL_1 = (188, 229, 255)   # is considered white but is useful for separating bars
+        self.BLUE_SEPARATOR_PIXEL_2 = (172, 207, 237)
 
         """Init"""
         self.filename = filename
@@ -29,12 +31,14 @@ class ImageParser:
         image_palette.putpalette((
             *self.WHITE_PIXEL,  # index of 0
             *self.BLACK_PIXEL,  # index of 1
-            *self.BLUE_PIXEL    # index of 2
+            *self.BLUE_PIXEL,   # index of 2
+            *self.BLUE_SEPARATOR_PIXEL_1,
+            *self.BLUE_SEPARATOR_PIXEL_2
         ))
 
         new_image = self.image_original.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
 
-        # new_image.save("quantised.png")
+        new_image.save("quantised.png")
         return new_image
 
     def locate_y_axis(self):
@@ -45,7 +49,7 @@ class ImageParser:
             black_pixels_found = False
             for x in range(self.image.width - 1):
                 pixel = self.image.getpixel((x, y))
-                if black_pixels_found and pixel == 0:     # the first white pixel after the last black pixel
+                if black_pixels_found and pixel != 1:     # the first white pixel after the last black pixel
                     if x in last_black_pixels:
                         last_black_pixels[x] += 1
                     else:
@@ -87,11 +91,11 @@ class ImageParser:
             if pixel == 1 and not skip_remaining_black_pixels:     # if black pixel
                 self.intervals.append(x)
                 skip_remaining_black_pixels = True
-            elif pixel == 0:
+            elif pixel != 1:
                 skip_remaining_black_pixels = False
 
         if len(self.intervals) not in ALLOWED_NUMBER_OF_INTERVALS:
-            print(f"WARNING: Possibly invalid number of intervals found in {self.filename}")
+            print(f"WARNING: Possibly invalid number of intervals ({len(self.intervals)}) found in {self.filename}")
 
     """Find position of bars"""
 
@@ -104,4 +108,4 @@ class ImageParser:
     """Get percentage of each raw score"""
 
 
-image = ImageParser("pdfs/snr_study_religion_20_subj_rpt/Externals-page09-img01.jpg")
+image = ImageParser("pdfs/snr_chemistry_21_subj_rpt/Total-page10-img01.jpg")
