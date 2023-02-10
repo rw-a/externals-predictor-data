@@ -20,15 +20,18 @@ class ImageParser:
         self.y_axis = 0         # the x-coordinate of the y-axis
         self.x_axis = 0         # the y-coordinate of the x-axis
         self.intervals = []     # the x-coordinates of the intervals on the x-axis
+        self.bars = {}          # the x-coordinates of the bars (with the value being their height)
 
         """Methods"""
         self.locate_y_axis()
         self.locate_x_axis()
         self.locate_intervals()
+        self.measure_bars()
 
     def quantize_image(self):
         image_palette = Image.new("P", (3, 1))
         image_palette.putpalette((
+            # ORDER MATTERS HERE
             *self.WHITE_PIXEL,  # index of 0
             *self.BLACK_PIXEL,  # index of 1
             *self.BLUE_PIXEL,   # index of 2
@@ -44,10 +47,10 @@ class ImageParser:
     def locate_y_axis(self):
         # dict with key being x-coord of last black pixel in the first consecutive group of black pixels in each row
         last_black_pixels = {}
-        for y in range(self.image.height - 1):
+        for y in range(self.image.height):
             # find the first black pixel in each row and add it to the dict
             black_pixels_found = False
-            for x in range(self.image.width - 1):
+            for x in range(self.image.width):
                 pixel = self.image.getpixel((x, y))
                 if black_pixels_found and pixel != 1:     # the first white pixel after the last black pixel
                     if x in last_black_pixels:
@@ -69,7 +72,7 @@ class ImageParser:
 
     def locate_x_axis(self):
         first_black_pixels = {}  # dict with key being y-coord of first black pixel in each column
-        for x in range(self.y_axis, self.image.width - 1):
+        for x in range(self.y_axis, self.image.width):
             # find the first black pixel in each column (starting from bottom) and add it to the dict
             for y in range(self.image.height - 1, 0, -1):
                 pixel = self.image.getpixel((x, y))
@@ -90,7 +93,7 @@ class ImageParser:
 
     def locate_intervals(self):
         skip_remaining_black_pixels = False     # ensures that consecutive black pixels are only counted once
-        for x in range(self.y_axis, self.image.width - 1):
+        for x in range(self.y_axis, self.image.width):
             pixel = self.image.getpixel((x, self.x_axis))
             if pixel == 1 and not skip_remaining_black_pixels:     # if black pixel
                 self.intervals.append(x)
@@ -101,9 +104,44 @@ class ImageParser:
         if len(self.intervals) not in ALLOWED_NUMBER_OF_INTERVALS:
             print(f"WARNING: Possibly invalid number of intervals ({len(self.intervals)}) in {self.filename}")
 
-    """Find position of bars"""
+    def measure_bars(self):
+        bar_found = False
+        bar_x_start = 0
+        bar_y_start = 0
+        bar_max_height = 0
 
-    """Determine value of each bar"""
+        x = self.y_axis
+        while x < self.image.width:
+            y = bar_y_start + 1 if bar_found else self.x_axis - 1   # once bar found, start searching from known start
+            while y > 0:
+                pixel = self.image.getpixel((x, y))
+                if pixel == 2:  # if pixel is blue
+                    if not bar_found:
+                        bar_x_start = x
+                        bar_y_start = y
+                        bar_found = True
+                    else:
+                        # if found that the next y start is lower
+                        if y > bar_y_start:
+                            bar_y_start = y
+                elif bar_found:
+                    if y < bar_y_start:    # if still continuing to search bar
+                        # if the bar height in this column is greater
+                        bar_height = bar_y_start - y
+                        if bar_height > bar_max_height:
+                            bar_max_height = bar_height
+                        break
+                    elif y == bar_y_start:     # if start of the next column should be a blue but isn't, the bar is done
+                        bar_x_middle = round((bar_x_start + x) / 2)
+                        self.bars[bar_x_middle] = bar_max_height
+                        bar_found = False
+                        bar_x_start = 0
+                        bar_y_start = 0
+                        bar_max_height = 0
+                        break
+                y -= 1
+            x += 1
+        print(self.bars)
 
     """Determine total height of all bars"""
 
@@ -112,4 +150,4 @@ class ImageParser:
     """Get percentage of each raw score"""
 
 
-image = ImageParser("pdfs/snr_chemistry_21_subj_rpt/Total-page10-img01.jpg")
+image = ImageParser("pdfs/snr_chemistry_21_subj_rpt/Externals-page09-img01.jpg")
