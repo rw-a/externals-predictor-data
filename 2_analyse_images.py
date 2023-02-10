@@ -63,6 +63,8 @@ class ImageParser:
                 for x_coord, frequency in last_black_pixels.items():
                     if frequency > 5:
                         self.y_axis = x_coord
+                        if self.y_axis / self.image.width > 0.2:
+                            print(f"WARNING: Possibly invalid y-axis position ({self.y_axis}) in {self.filename}")
                         return
 
     def locate_x_axis(self):
@@ -82,6 +84,8 @@ class ImageParser:
                 for y_coord, frequency in first_black_pixels.items():
                     if frequency > 5:
                         self.x_axis = y_coord + 1   # +1 because it needs to be the pixel before the first black pixel
+                        if self.x_axis / self.image.height < 0.8:
+                            print(f"WARNING: Possibly invalid x-axis position ({self.x_axis}) in {self.filename}")
                         return
 
     def locate_intervals(self):
@@ -95,7 +99,7 @@ class ImageParser:
                 skip_remaining_black_pixels = False
 
         if len(self.intervals) not in ALLOWED_NUMBER_OF_INTERVALS:
-            print(f"WARNING: Possibly invalid number of intervals ({len(self.intervals)}) found in {self.filename}")
+            print(f"WARNING: Possibly invalid number of intervals ({len(self.intervals)}) in {self.filename}")
 
     """Find position of bars"""
 
