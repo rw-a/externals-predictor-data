@@ -3,37 +3,53 @@ from PIL import Image
 
 class ImageParser:
     def __init__(self, filename: str):
-        self.image = Image.open(filename)
-        self.image_quantized = self.quantize_image()
+        """Settings"""
+        self.WHITE_PIXEL = (255, 255, 255)  # index of 0
+        self.BLACK_PIXEL = (0, 0, 0)        # index of 1
+        self.BLUE_PIXEL = (145, 189, 228)   # index of 2
 
+        """Init"""
+        self.image_original = Image.open(filename)
+        self.image = self.quantize_image()
+
+        """Variables"""
         self.y_axis = 0     # the horizontal position of the y-axis
         self.x_axis = 0     # the vertical position of the x-axis
 
-        # self.generate_false_colour()
-
-    @staticmethod
-    def is_black_pixel(pixel: tuple):
-        return pixel[0] < 2 and pixel[1] < 2 and pixel[2] <= 75
-
-    @staticmethod
-    def is_blue_pixel(pixel: tuple):
-        return 140 < pixel[0] < 160 and 50 < pixel[1] < 120 and pixel[2] > 200
+        """Methods"""
+        self.locate_y_axis()
 
     def quantize_image(self):
         image_palette = Image.new("P", (3, 1))
         image_palette.putpalette((
-            0, 0, 0,
-            255, 255, 255,
-            145, 189, 228
+            *self.WHITE_PIXEL,  # index of 0
+            *self.BLACK_PIXEL,  # index of 1
+            *self.BLUE_PIXEL    # index of 2
         ))
 
-        new_image = self.image.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
+        new_image = self.image_original.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
 
-        # new_image.save("quantise.png")
+        new_image.save("quantised.png")
         return new_image
 
     def locate_y_axis(self):
-        pass
+        first_black_pixels = {}     # dict with key being x-coord of first black pixel in each row
+        for y in range(self.image.height):
+            # find the first black pixel in each row and add it to the dict
+            for x in range(self.image.width):
+                pixel = self.image.getpixel((x, y))
+                if pixel == 1:  # if pixel is black
+                    if x in first_black_pixels:
+                        first_black_pixels[x] += 1
+                    else:
+                        first_black_pixels[x] = 1
+                    break
+            # check if there has been many black pixels on the same x-coord (i.e. vertical line = y-axis)
+            if len(first_black_pixels) > 0:
+                for x_coord, frequency in first_black_pixels.items():
+                    if frequency > 5:
+                        self.y_axis = x_coord
+                        return
 
     """Find position of y-axis"""
 
