@@ -1,4 +1,5 @@
 from PIL import Image
+from constants import ALLOWED_NUMBER_OF_INTERVALS
 
 
 class ImageParser:
@@ -9,16 +10,19 @@ class ImageParser:
         self.BLUE_PIXEL = (145, 189, 228)   # index of 2
 
         """Init"""
+        self.filename = filename
         self.image_original = Image.open(filename)
         self.image = self.quantize_image()
 
         """Variables"""
-        self.y_axis = 0     # the horizontal position of the y-axis
-        self.x_axis = 0     # the vertical position of the x-axis
+        self.y_axis = 0         # the x-coordinate of the y-axis
+        self.x_axis = 0         # the y-coordinate of the x-axis
+        self.intervals = []     # the x-coordinates of the intervals on the x-axis
 
         """Methods"""
         self.locate_y_axis()
         self.locate_x_axis()
+        self.locate_intervals()
 
     def quantize_image(self):
         image_palette = Image.new("P", (3, 1))
@@ -30,16 +34,16 @@ class ImageParser:
 
         new_image = self.image_original.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
 
-        new_image.save("quantised.png")
+        # new_image.save("quantised.png")
         return new_image
 
     def locate_y_axis(self):
         # dict with key being x-coord of last black pixel in the first consecutive group of black pixels in each row
         last_black_pixels = {}
-        for y in range(self.image.height):
+        for y in range(self.image.height - 1):
             # find the first black pixel in each row and add it to the dict
             black_pixels_found = False
-            for x in range(self.image.width):
+            for x in range(self.image.width - 1):
                 pixel = self.image.getpixel((x, y))
                 if black_pixels_found and pixel == 0:     # the first white pixel after the last black pixel
                     if x in last_black_pixels:
@@ -59,7 +63,7 @@ class ImageParser:
 
     def locate_x_axis(self):
         first_black_pixels = {}  # dict with key being y-coord of first black pixel in each column
-        for x in range(self.y_axis, self.image.width):
+        for x in range(self.y_axis, self.image.width - 1):
             # find the first black pixel in each column (starting from bottom) and add it to the dict
             for y in range(self.image.height - 1, 0, -1):
                 pixel = self.image.getpixel((x, y))
@@ -73,12 +77,21 @@ class ImageParser:
             if len(first_black_pixels) > 0:
                 for y_coord, frequency in first_black_pixels.items():
                     if frequency > 5:
-                        self.x_axis = y_coord
+                        self.x_axis = y_coord + 1   # +1 because it needs to be the pixel before the first black pixel
                         return
 
-    """Find position of x-axis, starting horizontally from y-axis"""
+    def locate_intervals(self):
+        skip_remaining_black_pixels = False     # ensures that consecutive black pixels are only counted once
+        for x in range(self.y_axis, self.image.width - 1):
+            pixel = self.image.getpixel((x, self.x_axis))
+            if pixel == 1 and not skip_remaining_black_pixels:     # if black pixel
+                self.intervals.append(x)
+                skip_remaining_black_pixels = True
+            elif pixel == 0:
+                skip_remaining_black_pixels = False
 
-    """Find position of tick marks on x-axis"""
+        if len(self.intervals) not in ALLOWED_NUMBER_OF_INTERVALS:
+            print(f"WARNING: Possibly invalid number of intervals found in {self.filename}")
 
     """Find position of bars"""
 
