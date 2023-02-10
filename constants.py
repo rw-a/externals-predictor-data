@@ -15,8 +15,11 @@ IMAGES_DIRECTORY = {
     }
 }
 
-AXIS_INTERVALS = {
+# how much raw score each interval gap represents
+AXIS_INTERVAL_DISTANCE = {
     "Internals": 5,
     "Externals": 5,
     "Total": 10
 }
+# used to verify image analysis. if the graph has a number of intervals that isn't in this list, it read it wrong
+ALLOWED_NUMBER_OF_INTERVALS = [6, 11, 16]
