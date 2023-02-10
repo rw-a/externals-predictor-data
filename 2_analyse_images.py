@@ -18,6 +18,7 @@ class ImageParser:
 
         """Methods"""
         self.locate_y_axis()
+        self.locate_x_axis()
 
     def quantize_image(self):
         image_palette = Image.new("P", (3, 1))
@@ -33,25 +34,47 @@ class ImageParser:
         return new_image
 
     def locate_y_axis(self):
-        first_black_pixels = {}     # dict with key being x-coord of first black pixel in each row
+        # dict with key being x-coord of last black pixel in the first consecutive group of black pixels in each row
+        last_black_pixels = {}
         for y in range(self.image.height):
             # find the first black pixel in each row and add it to the dict
+            black_pixels_found = False
             for x in range(self.image.width):
                 pixel = self.image.getpixel((x, y))
-                if pixel == 1:  # if pixel is black
-                    if x in first_black_pixels:
-                        first_black_pixels[x] += 1
+                if black_pixels_found and pixel == 0:     # the first white pixel after the last black pixel
+                    if x in last_black_pixels:
+                        last_black_pixels[x] += 1
                     else:
-                        first_black_pixels[x] = 1
+                        last_black_pixels[x] = 1
                     break
+                if not black_pixels_found and pixel == 1:  # if pixel is the black pixel to be found
+                    black_pixels_found = True
+
             # check if there has been many black pixels on the same x-coord (i.e. vertical line = y-axis)
-            if len(first_black_pixels) > 0:
-                for x_coord, frequency in first_black_pixels.items():
+            if len(last_black_pixels) > 0:
+                for x_coord, frequency in last_black_pixels.items():
                     if frequency > 5:
                         self.y_axis = x_coord
                         return
 
-    """Find position of y-axis"""
+    def locate_x_axis(self):
+        first_black_pixels = {}  # dict with key being y-coord of first black pixel in each column
+        for x in range(self.y_axis, self.image.width):
+            # find the first black pixel in each column (starting from bottom) and add it to the dict
+            for y in range(self.image.height - 1, 0, -1):
+                pixel = self.image.getpixel((x, y))
+                if pixel == 1:  # if pixel is black
+                    if y in first_black_pixels:
+                        first_black_pixels[y] += 1
+                    else:
+                        first_black_pixels[y] = 1
+                    break
+            # check if there has been many black pixels on the same x-coord (i.e. vertical line = y-axis)
+            if len(first_black_pixels) > 0:
+                for y_coord, frequency in first_black_pixels.items():
+                    if frequency > 5:
+                        self.x_axis = y_coord
+                        return
 
     """Find position of x-axis, starting horizontally from y-axis"""
 
