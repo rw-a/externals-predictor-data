@@ -13,7 +13,7 @@ for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
 
     year = int("20" + filename[filename.index("_subj_rpt") - 2: filename.index("_subj_rpt")])
 
-    if not os.path.exists(filename[:-4]):
+    if not os.path.exists(filename[:-4]):   # [:-4] removes the .pdf ending
         os.mkdir(filename[:-4])
 
     for graph_type, page_number in IMAGES_DIRECTORY[year].items():
@@ -26,4 +26,3 @@ for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
             image = PdfImage(image_data)
             out = image.extract_to(fileprefix=f"{filename[:-4]}/"
                                               f"{graph_type}-page{page_number:02}-img{image_index + 1:02}")
-
