@@ -9,12 +9,13 @@ if not os.path.exists(FOLDER_NAME):
 
 
 for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
-    if os.path.exists(filename[:-4]):   # skip if subject has already been analysed
+    year = int("20" + filename[filename.index("_subj_rpt") - 2: filename.index("_subj_rpt")])
+    folder_name = filename.replace("snr_", "").replace("_subj_rpt", "").replace(".pdf", "")
+    if os.path.exists(folder_name):   # skip if subject has already been analysed
         continue
-    os.mkdir(filename[:-4])     # [:-4] removes the .pdf ending
+    os.mkdir(folder_name)     # [:-4] removes the .pdf ending
 
     pdf = Pdf.open(filename)
-    year = int("20" + filename[filename.index("_subj_rpt") - 2: filename.index("_subj_rpt")])
 
     for graph_type, page_number in IMAGES_DIRECTORY[year].items():
         page = pdf.pages[page_number - 1]
@@ -24,5 +25,5 @@ for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
 
         for image_index, image_data in enumerate(page.images.values()):
             image = PdfImage(image_data)
-            out = image.extract_to(fileprefix=f"{filename[:-4]}/"
-                                              f"{graph_type}-page{page_number:02}-img{image_index + 1:02}")
+            out = image.extract_to(
+                fileprefix=f"{folder_name}/{graph_type}-page{page_number:02}-img{image_index + 1:02}")
