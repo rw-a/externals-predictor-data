@@ -1,5 +1,6 @@
 import os
 import glob
+import traceback
 from pikepdf import Pdf, PdfImage
 from constants import IMAGES_DIRECTORY
 
@@ -9,11 +10,15 @@ if not os.path.exists(FOLDER_NAME):
 
 
 for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
-    year = int("20" + filename[filename.index("_subj_rpt") - 2: filename.index("_subj_rpt")])
-    folder_name = filename.replace("snr_", "").replace("_subj_rpt", "").replace(".pdf", "")
-    if os.path.exists(folder_name):   # skip if subject has already been analysed
+    try:
+        year = int("20" + filename[filename.index("_subj_rpt") - 2: filename.index("_subj_rpt")])
+        folder_name = filename.replace("snr_", "").replace("_subj_rpt", "").replace(".pdf", "")
+        if os.path.exists(folder_name):   # skip if subject has already been analysed
+            continue
+        os.mkdir(folder_name)     # [:-4] removes the .pdf ending
+    except:
+        print(f"ERROR: Reading {filename}")
         continue
-    os.mkdir(folder_name)     # [:-4] removes the .pdf ending
 
     pdf = Pdf.open(filename)
 
