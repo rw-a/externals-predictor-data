@@ -1,15 +1,23 @@
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageFilter
 from constants import ALLOWED_NUMBER_OF_INTERVALS
 
 
 class ImageParser:
     def __init__(self, filename: str):
         """Settings"""
+        self.DEBUG = True
+        self.SEPARATE_BLUES = False
+
         self.WHITE_PIXEL = (255, 255, 255)  # index of 0
-        self.BLACK_PIXEL = (0, 0, 0)        # index of 1
-        self.BLUE_PIXEL = (145, 189, 228)   # index of 2
-        self.BLUE_SEPARATOR_PIXEL_1 = (172, 207, 237)   # darker than 2
-        self.BLUE_SEPARATOR_PIXEL_2 = (188, 229, 255)   # is considered white but is useful for separating bars
+        self.BLACK_PIXEL = (2, 2, 2)        # index of 1
+        if self.SEPARATE_BLUES:
+            self.BLUE_PIXEL = (145, 189, 228)  # index of 2
+            self.BLUE_SEPARATOR_PIXEL_1 = (172, 207, 237)   # darker than 2
+            self.BLUE_SEPARATOR_PIXEL_2 = (188, 229, 255)   # is considered white but is useful for separating bars
+        else:
+            # actually in between true blue and separator blue
+            self.BLUE_PIXEL = (165, 199, 233)  # index of 2
 
         """Init"""
         self.filename = filename
@@ -21,6 +29,7 @@ class ImageParser:
         self.x_axis = 0         # the y-coordinate of the x-axis
         self.intervals = []     # the x-coordinates of the intervals on the x-axis
         self.bars = {}          # the x-coordinates of the bars (with the value being their height)
+        self.bars_debug = {}    # the x-coordinates of the bars (with the value being a tuple of y-coord and height)
 
         """Methods"""
         self.locate_y_axis()
@@ -29,20 +38,34 @@ class ImageParser:
         self.measure_bars()
 
     def quantize_image(self):
-        image_palette = Image.new("P", (3, 1))
-        image_palette.putpalette((
+        """Set black level of image"""
+        data = np.array(self.image_original)
+        red, green, blue = data.T
+        black_pixels = (red < self.BLACK_PIXEL[0]) & (blue < self.BLACK_PIXEL[1]) & (green < self.BLACK_PIXEL[2])
+        data[...][black_pixels.T] = self.BLACK_PIXEL
+        black_levelled_image = Image.fromarray(data)
+
+        filtered_image = black_levelled_image.filter(ImageFilter.EDGE_ENHANCE_MORE)
+
+        palette = [
             # ORDER MATTERS HERE
             *self.WHITE_PIXEL,  # index of 0
             *self.BLACK_PIXEL,  # index of 1
             *self.BLUE_PIXEL,   # index of 2
-            *self.BLUE_SEPARATOR_PIXEL_1,
-            *self.BLUE_SEPARATOR_PIXEL_2
-        ))
+        ]
+        if self.SEPARATE_BLUES:
+            palette.extend(self.BLUE_SEPARATOR_PIXEL_1)
+            palette.extend(self.BLUE_SEPARATOR_PIXEL_2)
 
-        new_image = self.image_original.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
+        image_palette = Image.new("P", (3, 1))
+        image_palette.putpalette(palette)
 
-        new_image.save("quantised.png")
-        return new_image
+        quantised_image = filtered_image.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
+
+        if self.DEBUG:
+            quantised_image.save("quantised.png")
+
+        return quantised_image
 
     def locate_y_axis(self):
         # dict with key being x-coord of last black pixel in the first consecutive group of black pixels in each row
@@ -131,10 +154,14 @@ class ImageParser:
                         if bar_height > bar_max_height:
                             bar_max_height = bar_height
                         break
-                    elif y == bar_y_start:     # if start of the next column should be a blue but isn't, the bar is done
+                    elif y == bar_y_start and self.image.getpixel((x, y - 1)) != 2:
+                        # if start of the next column should be a blue but isn't, the bar is done
+                        # also check one above in case it's just a random non-blue dot
+
                         bar_x_middle = round((bar_x_start + x) / 2)
-                        # self.bars[bar_x_middle] = bar_max_height
-                        self.bars[bar_x_middle] = (bar_y_start, bar_max_height)     # for debugging when graphing
+                        self.bars[bar_x_middle] = bar_max_height
+                        self.bars_debug[bar_x_middle] = (bar_y_start, bar_max_height)
+
                         bar_found = False
                         bar_x_start = 0
                         bar_y_start = 0
@@ -142,15 +169,14 @@ class ImageParser:
                         break
                 y -= 1
             x += 1
-        print(self.bars)
 
-        new_image = Image.new("RGB", (self.image.width, self.image.height))
-        for bar, position in self.bars.items():
-            for i in range(position[1]):
-                new_image.putpixel((bar, position[0] - i), (255, 0, 0))
-        new_image.save("bars.png")
-
-    """Determine total height of all bars"""
+        if self.DEBUG:
+            print(self.bars_debug)
+            new_image = self.image.copy()
+            for bar, position in self.bars_debug.items():
+                for i in range(position[1]):
+                    new_image.putpixel((bar, position[0] - i), (255, 0, 0))
+            new_image.save("bars.png")
 
     """Convert height of each bar to percentage"""
 
@@ -158,3 +184,4 @@ class ImageParser:
 
 
 image = ImageParser("pdfs/snr_chemistry_21_subj_rpt/Total-page10-img01.jpg")
+# image = ImageParser("pdfs/snr_study_religion_20_subj_rpt/Internals-page06-img01.jpg")
