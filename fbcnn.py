@@ -54,8 +54,10 @@ def main():
 
     input_folders = {}
     for folder in os.listdir(input_path):
-        input_folders[folder] = glob.glob(f"{folder}/*")
-        os.mkdir(os.path.join(output_path, folder))
+        input_folders[folder] = glob.glob(f"{input_path}/{folder}/*")
+        if not os.path.exists(os.path.join(output_path, folder)):
+            os.mkdir(os.path.join(output_path, folder))
+    print(input_folders)
 
     index = 1
     for folder, image_paths in input_folders.items():
@@ -65,7 +67,7 @@ def main():
             image = util.imread_uint(image_path, n_channels=n_channels)
 
             if n_channels == 3:
-             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             _, encimg = cv2.imencode('.jpg', image, [int(cv2.IMWRITE_JPEG_QUALITY), quality_factor])
             image = cv2.imdecode(encimg, 0) if n_channels == 1 else cv2.imdecode(encimg, 3)
             if n_channels == 3:
@@ -79,3 +81,7 @@ def main():
 
             util.imsave(output_image, os.path.join(output_path, folder, img_name+'.png'))
             index += 1
+
+
+if __name__ == "__main__":
+    main()
