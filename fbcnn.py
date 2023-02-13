@@ -1,4 +1,5 @@
 """To be used in Google Colab"""
+import glob
 import os.path
 import logging
 import torch
@@ -51,31 +52,30 @@ def main():
     model = model.to(device)
     logger.info('Model path: {:s}'.format(model_path))
 
-    output_paths = util.get_image_paths(input_path)
-    for idx, img in enumerate(output_paths):
+    input_folders = {}
+    for folder in os.listdir(input_path):
+        input_folders[folder] = glob.glob(f"{folder}/*")
+        os.mkdir(os.path.join(output_path, folder))
 
-        # ------------------------------------
-        # (1) img_L
-        # ------------------------------------
-        img_name, ext = os.path.splitext(os.path.basename(img))
-        logger.info('{:->4d}--> {:>10s}'.format(idx+1, img_name+ext))
-        img_L = util.imread_uint(img, n_channels=n_channels)
+    index = 1
+    for folder, image_paths in input_folders.items():
+        for image_path in image_paths:
+            img_name, ext = os.path.splitext(os.path.basename(image_path))
+            logger.info('{:->4d}--> {:>10s}'.format(index, img_name+ext))
+            image = util.imread_uint(image_path, n_channels=n_channels)
 
-        if n_channels == 3:
-         img_L = cv2.cvtColor(img_L, cv2.COLOR_RGB2BGR)
-        _, encimg = cv2.imencode('.jpg', img_L, [int(cv2.IMWRITE_JPEG_QUALITY), quality_factor])
-        img_L = cv2.imdecode(encimg, 0) if n_channels == 1 else cv2.imdecode(encimg, 3)
-        if n_channels == 3:
-         img_L = cv2.cvtColor(img_L, cv2.COLOR_BGR2RGB)
-        img_L = util.uint2tensor4(img_L)
-        img_L = img_L.to(device)
+            if n_channels == 3:
+             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            _, encimg = cv2.imencode('.jpg', image, [int(cv2.IMWRITE_JPEG_QUALITY), quality_factor])
+            image = cv2.imdecode(encimg, 0) if n_channels == 1 else cv2.imdecode(encimg, 3)
+            if n_channels == 3:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = util.uint2tensor4(image)
+            image = image.to(device)
 
-        # ------------------------------------
-        # (2) img_E
-        # ------------------------------------
+            output_image, QF = model(image)
+            output_image = util.tensor2single(output_image)
+            output_image = util.single2uint(output_image)
 
-        img_E,QF = model(img_L)
-        img_E = util.tensor2single(img_E)
-        img_E = util.single2uint(img_E)
-
-        util.imsave(img_E, os.path.join(output_path, img_name+'.png'))
+            util.imsave(output_image, os.path.join(output_path, folder, img_name+'.png'))
+            index += 1
