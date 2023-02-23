@@ -22,30 +22,25 @@ class ImageParser:
         """Init"""
         self.filename = filename
         self.image_original = Image.open(filename)
-        self.image = self.quantize_image()
+        self.image = self.preprocess_image()
 
         """Variables"""
-        self.y_axis = 0         # the x-coordinate of the y-axis
-        self.x_axis = 0         # the y-coordinate of the x-axis
+        self.y_axis = 0         # the x-coordinate of the y-axis (from the right-most black pixel)
+        self.x_axis = 0         # the y-coordinate of the x-axis (from the bottom-most black pixel)
         self.intervals = []     # the x-coordinates of the intervals on the x-axis
-        self.bars = {}          # the x-coordinates of the bars (with the value being their height)
-        self.bars_debug = {}    # the x-coordinates of the bars (with the value being a tuple of y-coord and height)
+        self.bar_base = 0       # the y-coordinate of the bottom of the bars in the graph
+        self.bar_base_colour = None  # the main colour of the bar bases
+        self.bars = []          # tuples containing the start and end x-coordinates of the bars
 
         """Methods"""
         self.locate_y_axis()
         self.locate_x_axis()
         self.locate_intervals()
-        self.measure_bars()
+        self.locate_bar_base()
+        self.get_bar_x_coordinates()
 
-    def quantize_image(self):
-        """Set black level of image"""
-        data = np.array(self.image_original)
-        red, green, blue = data.T
-        black_pixels = (red < self.BLACK_PIXEL[0]) & (blue < self.BLACK_PIXEL[1]) & (green < self.BLACK_PIXEL[2])
-        data[...][black_pixels.T] = self.BLACK_PIXEL
-        black_levelled_image = Image.fromarray(data)
-
-        filtered_image = black_levelled_image.filter(ImageFilter.EDGE_ENHANCE_MORE)
+    def preprocess_image(self):
+        edge_enhanced_image = self.image_original.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
         palette = [
             # ORDER MATTERS HERE
@@ -60,7 +55,7 @@ class ImageParser:
         image_palette = Image.new("P", (3, 1))
         image_palette.putpalette(palette)
 
-        quantised_image = filtered_image.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
+        quantised_image = edge_enhanced_image.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
 
         if self.DEBUG:
             quantised_image.save("quantised.png")
@@ -68,6 +63,7 @@ class ImageParser:
         return quantised_image
 
     def locate_y_axis(self):
+        """Finds the x-coordinate of the right-most pixel of the y-axis"""
         # dict with key being x-coord of last black pixel in the first consecutive group of black pixels in each row
         last_black_pixels = {}
         for y in range(self.image.height):
@@ -91,9 +87,12 @@ class ImageParser:
                         self.y_axis = x_coord
                         if self.y_axis / self.image.width > 0.2:
                             print(f"WARNING: Possibly invalid y-axis position ({self.y_axis}) in {self.filename}")
-                        return
+                        return self.y_axis
+
+        print("ERROR: Couldn't locate y-axis")
 
     def locate_x_axis(self):
+        """Finds the y-coordinate of the bottom of the x-axis"""
         first_black_pixels = {}  # dict with key being y-coord of first black pixel in each column
         for x in range(self.y_axis, self.image.width):
             # find the first black pixel in each column (starting from bottom) and add it to the dict
@@ -112,9 +111,12 @@ class ImageParser:
                         self.x_axis = y_coord + 1   # +1 because it needs to be the pixel before the first black pixel
                         if self.x_axis / self.image.height < 0.8:
                             print(f"WARNING: Possibly invalid x-axis position ({self.x_axis}) in {self.filename}")
-                        return
+                        return self.x_axis
+
+        print("ERROR: Couldn't locate x-axis")
 
     def locate_intervals(self):
+        """Locates the x-coordinates (left-most pixel) of the axis-ticks of the x-axis"""
         skip_remaining_black_pixels = False     # ensures that consecutive black pixels are only counted once
         for x in range(self.y_axis, self.image.width):
             pixel = self.image.getpixel((x, self.x_axis))
@@ -127,61 +129,56 @@ class ImageParser:
         if len(self.intervals) not in ALLOWED_NUMBER_OF_INTERVALS:
             print(f"WARNING: Possibly invalid number of intervals ({len(self.intervals)}) in {self.filename}")
 
-    def measure_bars(self):
-        bar_found = False
-        bar_x_start = 0
-        bar_y_start = 0
-        bar_max_height = 0
-
-        x = self.y_axis
-        while x < self.image.width:
-            y = bar_y_start + 1 if bar_found else self.x_axis - 5   # once bar found, start searching from known start
-            while y > 0:
+    def locate_bar_base(self):
+        for y in range(self.x_axis - 10, 0, -1):   # start a few pixels above the bottom of the x-axis
+            num_black_pixels_in_row = 0
+            for x in range(self.y_axis, self.image.width):
                 pixel = self.image.getpixel((x, y))
-                if pixel == 2:  # if pixel is blue
-                    if not bar_found:
-                        bar_x_start = x
-                        bar_y_start = y
-                        bar_found = True
-                    else:
-                        # if found that the next y start is lower
-                        if y > bar_y_start:
-                            bar_y_start = y
-                elif bar_found:
-                    if y < bar_y_start:    # if still continuing to search bar
-                        # if the bar height in this column is greater
-                        bar_height = bar_y_start - y
-                        if bar_height > bar_max_height:
-                            bar_max_height = bar_height
-                        break
-                    elif y == bar_y_start and self.image.getpixel((x, y - 1)) != 2:
-                        # if start of the next column should be a blue but isn't, the bar is done
-                        # also check one above in case it's just a random non-blue dot
+                if pixel == 1:
+                    num_black_pixels_in_row += 1
 
-                        bar_x_middle = round((bar_x_start + x) / 2)
-                        self.bars[bar_x_middle] = bar_max_height
-                        self.bars_debug[bar_x_middle] = (bar_y_start, bar_max_height)
+            if num_black_pixels_in_row >= 10:
+                # if a lot of black pixels, most are probs black. otherwise, base is mostly blue probs
+                self.bar_base_colour = 1 if num_black_pixels_in_row >= 100 else 2
+                self.bar_base = y
+                return self.bar_base
+        print(f"ERROR: Couldn't locate bar base")
 
-                        bar_found = False
-                        bar_x_start = 0
-                        bar_y_start = 0
-                        bar_max_height = 0
-                        break
-                y -= 1
-            x += 1
+    def get_bar_x_coordinates(self):
+        in_bar = False
+        bar_x_start = 0
 
-        if self.DEBUG:
-            print(self.bars_debug)
-            new_image = self.image.copy()
-            for bar, position in self.bars_debug.items():
-                for i in range(position[1]):
-                    new_image.putpixel((bar, position[0] - i), (255, 0, 0))
-            new_image.save("bars.png")
+        for x in range(self.y_axis, self.image.width):
+            pixel = self.image.getpixel((x, self.bar_base))
+
+            if not in_bar:
+                if (self.bar_base_colour == 1 and
+                    (pixel == 1 or (pixel == 2 and self.image.getpixel((x, self.bar_base + 1)) == 1)))\
+                        or (self.bar_base_colour == 2 and (pixel == 2 or pixel == 1)):
+                    """
+                    Detects if this pixel is the bottom-left pixel of a bar
+                    
+                    Case 1: bar base colour is black
+                        1. Pixel is black,
+                        2. Pixel is blue and pixel above is black (in case current pixel wasn't made black)
+                    
+                    Case 2: bar base colour is blue
+                        1. Pixel is blue or black
+                    """
+
+                    in_bar = True
+                    bar_x_start = x
+            else:
+                if pixel == 0:
+                    self.bars.append((bar_x_start, x))
+                    in_bar = False
+                    bar_x_start = 0
+        print(self.bars)
+        return self.bars
 
     """Convert height of each bar to percentage"""
 
     """Get percentage of each raw score"""
 
 
-image = ImageParser("pdfs/snr_chemistry_21_subj_rpt/Total-page10-img01.jpg")
-# image = ImageParser("pdfs/snr_study_religion_20_subj_rpt/Internals-page06-img01.jpg")
+image = ImageParser("pdfs/engineering_21/Internals-page05-img01.png")
