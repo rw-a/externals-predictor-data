@@ -1,5 +1,5 @@
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
 from constants import NUMBER_OF_INTERVALS
 
 
@@ -7,17 +7,10 @@ class ImageParser:
     def __init__(self, filename: str):
         """Settings"""
         self.DEBUG = True
-        self.SEPARATE_BLUES = False
 
         self.WHITE_PIXEL = (255, 255, 255)  # index of 0
         self.BLACK_PIXEL = (2, 2, 2)        # index of 1
-        if self.SEPARATE_BLUES:
-            self.BLUE_PIXEL = (145, 189, 228)  # index of 2
-            self.BLUE_SEPARATOR_PIXEL_1 = (172, 207, 237)   # darker than 2
-            self.BLUE_SEPARATOR_PIXEL_2 = (188, 229, 255)   # is considered white but is useful for separating bars
-        else:
-            # actually in between true blue and separator blue
-            self.BLUE_PIXEL = (165, 199, 233)  # index of 2
+        self.BLUE_PIXEL = (165, 199, 233)  # index of 2
 
         """Init"""
         self.filename = filename
@@ -29,31 +22,29 @@ class ImageParser:
         self.x_axis = 0         # the y-coordinate of the x-axis (from the bottom-most black pixel)
         self.intervals = []     # the x-coordinates of the intervals on the x-axis
         self.bars_x = []        # the x-coordinates (centre) of the bars in the graph
+        self.bars_height = {}   # dict mapping x-coordinate (centre) of bars to their height
+        self.bars = {}          # dict mapping x-coordinate (centre) of bars to their percentage
 
         """Methods"""
         self.locate_y_axis()
         self.locate_x_axis()
         self.locate_intervals()
         self.locate_bars()
-        print(self.bars_x)
+        self.get_bar_height()
+        self.calculate_bar_percentages()
 
     def preprocess_image(self):
-        edge_enhanced_image = self.image_original.filter(ImageFilter.EDGE_ENHANCE_MORE)
-
         palette = [
             # ORDER MATTERS HERE
             *self.WHITE_PIXEL,  # index of 0
             *self.BLACK_PIXEL,  # index of 1
             *self.BLUE_PIXEL,   # index of 2
         ]
-        if self.SEPARATE_BLUES:
-            palette.extend(self.BLUE_SEPARATOR_PIXEL_1)
-            palette.extend(self.BLUE_SEPARATOR_PIXEL_2)
 
         image_palette = Image.new("P", (3, 1))
         image_palette.putpalette(palette)
 
-        quantised_image = edge_enhanced_image.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
+        quantised_image = self.image_original.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
 
         if self.DEBUG:
             quantised_image.save("quantised.png")
@@ -138,9 +129,27 @@ class ImageParser:
             print(f"ERROR: Invalid number of intervals ({len(self.intervals)}) in {self.filename}. SKIPPING")
 
         num_bars = NUMBER_OF_INTERVALS[len(self.intervals)]
-        self.bars_x = np.round(np.linspace(self.intervals[0], self.intervals[-1], num_bars))
+        self.bars_x = np.linspace(self.intervals[0], self.intervals[-1], num_bars).astype(int)
 
-    """Convert height of each bar to percentage"""
+    def get_bar_height(self):
+        for bar_x in self.bars_x:
+            # Take the median of 3 columns in the bar to prevent outliers
+            heights = []
+            for x in range(bar_x - 1, bar_x + 2):
+                height = 0
+                for y in range(self.x_axis):
+                    pixel = self.image.getpixel((x, y))
+                    if pixel == 2:
+                        height += 1
+                heights.append(height)
+
+            median_height = int(np.median(heights))
+            self.bars_height[bar_x] = median_height
+
+    def calculate_bar_percentages(self):
+        """Convert height of each bar to percentage"""
+        total_height = sum(self.bars_height.values())
+        pass
 
     """Get percentage of each raw score"""
 
