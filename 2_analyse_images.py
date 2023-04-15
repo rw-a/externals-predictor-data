@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import Image, ImageFilter
-from constants import ALLOWED_NUMBER_OF_INTERVALS
+from constants import NUMBER_OF_INTERVALS
 
 
 class ImageParser:
@@ -28,16 +28,14 @@ class ImageParser:
         self.y_axis = 0         # the x-coordinate of the y-axis (from the right-most black pixel)
         self.x_axis = 0         # the y-coordinate of the x-axis (from the bottom-most black pixel)
         self.intervals = []     # the x-coordinates of the intervals on the x-axis
-        self.bar_base = 0       # the y-coordinate of the bottom of the bars in the graph
-        self.bar_base_colour = None  # the main colour of the bar bases
-        self.bars = []          # tuples containing the start and end x-coordinates of the bars
+        self.bars_x = []        # the x-coordinates (centre) of the bars in the graph
 
         """Methods"""
         self.locate_y_axis()
         self.locate_x_axis()
         self.locate_intervals()
-        self.locate_bar_base()
-        self.get_bar_x_coordinates()
+        self.locate_bars()
+        print(self.bars_x)
 
     def preprocess_image(self):
         edge_enhanced_image = self.image_original.filter(ImageFilter.EDGE_ENHANCE_MORE)
@@ -126,55 +124,21 @@ class ImageParser:
             elif pixel != 1:
                 skip_remaining_black_pixels = False
 
-        if len(self.intervals) not in ALLOWED_NUMBER_OF_INTERVALS:
-            print(f"WARNING: Possibly invalid number of intervals ({len(self.intervals)}) in {self.filename}")
+        # TEST
+        differences = np.ediff1d(self.intervals)
+        median_diff = np.median(differences)
+        for i in differences:
+            discrepancy = abs(i - median_diff)
+            if discrepancy > 1:
+                print(f"WARNING: Possibly invalid position of interval (discrepancy of {discrepancy}) in {self.filename}")
 
-    def locate_bar_base(self):
-        for y in range(self.x_axis - 10, 0, -1):   # start a few pixels above the bottom of the x-axis
-            num_black_pixels_in_row = 0
-            for x in range(self.y_axis, self.image.width):
-                pixel = self.image.getpixel((x, y))
-                if pixel == 1:
-                    num_black_pixels_in_row += 1
+    def locate_bars(self):
+        """Locates the x-coordinates (center) of each bar"""
+        if len(self.intervals) not in NUMBER_OF_INTERVALS:
+            print(f"ERROR: Invalid number of intervals ({len(self.intervals)}) in {self.filename}. SKIPPING")
 
-            if num_black_pixels_in_row >= 10:
-                # if a lot of black pixels, most are probs black. otherwise, base is mostly blue probs
-                self.bar_base_colour = 1 if num_black_pixels_in_row >= 100 else 2
-                self.bar_base = y
-                return self.bar_base
-        print(f"ERROR: Couldn't locate bar base")
-
-    def get_bar_x_coordinates(self):
-        in_bar = False
-        bar_x_start = 0
-
-        for x in range(self.y_axis, self.image.width):
-            pixel = self.image.getpixel((x, self.bar_base))
-
-            if not in_bar:
-                if (self.bar_base_colour == 1 and
-                    (pixel == 1 or (pixel == 2 and self.image.getpixel((x, self.bar_base + 1)) == 1)))\
-                        or (self.bar_base_colour == 2 and (pixel == 2 or pixel == 1)):
-                    """
-                    Detects if this pixel is the bottom-left pixel of a bar
-                    
-                    Case 1: bar base colour is black
-                        1. Pixel is black,
-                        2. Pixel is blue and pixel above is black (in case current pixel wasn't made black)
-                    
-                    Case 2: bar base colour is blue
-                        1. Pixel is blue or black
-                    """
-
-                    in_bar = True
-                    bar_x_start = x
-            else:
-                if pixel == 0:
-                    self.bars.append((bar_x_start, x))
-                    in_bar = False
-                    bar_x_start = 0
-        print(self.bars)
-        return self.bars
+        num_bars = NUMBER_OF_INTERVALS[len(self.intervals)]
+        self.bars_x = np.round(np.linspace(self.intervals[0], self.intervals[-1], num_bars))
 
     """Convert height of each bar to percentage"""
 
