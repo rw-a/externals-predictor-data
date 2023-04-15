@@ -1,3 +1,4 @@
+import csv
 import numpy as np
 from PIL import Image
 from constants import NUMBER_OF_INTERVALS
@@ -25,7 +26,8 @@ class ImageParser:
         self.intervals = []     # the x-coordinates of the intervals on the x-axis
         self.bars_x = []        # the x-coordinates (centre) of the bars in the graph
         self.bars_height = {}   # dict mapping x-coordinate (centre) of bars to their height
-        self.bars = {}          # dict mapping x-coordinate (centre) of bars to their percentage
+        self.bars = {}          # dict mapping x-coordinate (centre) of bars to their percentage (actually decimal)
+        self.score_lookup = {}  # dict mapping raw score to percentile
 
         """Methods"""
         self.locate_y_axis()
@@ -34,6 +36,13 @@ class ImageParser:
         self.locate_bars()
         self.get_bar_height()
         self.calculate_bar_percentages()
+        self.get_score_mapping()
+
+        if self.DEBUG:
+            with open("lookup.csv", 'w') as file:
+                writer = csv.writer(file)
+                for percentile in self.score_lookup.values():
+                    writer.writerow([percentile])
 
     def preprocess_image(self):
         palette = [
@@ -156,9 +165,13 @@ class ImageParser:
     def calculate_bar_percentages(self):
         """Convert height of each bar to percentage"""
         total_height = sum(self.bars_height.values())
-        pass
+        for bar_x, height in self.bars_height.items():
+            self.bars[bar_x] = height / total_height
 
-    """Get percentage of each raw score"""
+    def get_score_mapping(self):
+        """Enumerate the bars to convert them into their corresponding raw score"""
+        for raw_score, percentile in enumerate(self.bars.values()):
+            self.score_lookup[raw_score] = percentile
 
 
 image = ImageParser("pdfs/engineering_21/Internals-page05-img01.png")
