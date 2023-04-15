@@ -12,6 +12,8 @@ class ImageParser:
         self.BLACK_PIXEL = (2, 2, 2)        # index of 1
         self.BLUE_PIXEL = (165, 199, 233)  # index of 2
 
+        self.X_AXIS_WIDTH = 4
+
         """Init"""
         self.filename = filename
         self.image_original = Image.open(filename)
@@ -129,7 +131,7 @@ class ImageParser:
             print(f"ERROR: Invalid number of intervals ({len(self.intervals)}) in {self.filename}. SKIPPING")
 
         num_bars = NUMBER_OF_INTERVALS[len(self.intervals)]
-        self.bars_x = np.linspace(self.intervals[0], self.intervals[-1], num_bars).astype(int)
+        self.bars_x = np.round(np.linspace(self.intervals[0], self.intervals[-1], num_bars)).astype(int)
 
     def get_bar_height(self):
         for bar_x in self.bars_x:
@@ -137,14 +139,19 @@ class ImageParser:
             heights = []
             for x in range(bar_x - 1, bar_x + 2):
                 height = 0
-                for y in range(self.x_axis):
+                for y in range(self.x_axis - self.X_AXIS_WIDTH):
                     pixel = self.image.getpixel((x, y))
                     if pixel == 2:
                         height += 1
+                        if self.DEBUG:
+                            self.image.putpixel((x, y), (255, 0, 0))
                 heights.append(height)
 
             median_height = int(np.median(heights))
             self.bars_height[bar_x] = median_height
+
+        if self.DEBUG:
+            self.image.save("bars.png")
 
     def calculate_bar_percentages(self):
         """Convert height of each bar to percentage"""
