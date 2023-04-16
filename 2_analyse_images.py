@@ -27,7 +27,7 @@ class ImageParser:
         self.bars_x = []        # the x-coordinates (centre) of the bars in the graph
         self.bars_height = {}   # dict mapping x-coordinate (centre) of bars to their height
         self.bars = {}          # dict mapping x-coordinate (centre) of bars to their percentage (actually decimal)
-        self.score_lookup = {}  # dict mapping raw score to percentile
+        self.score_lookup = {}  # dict mapping raw score to percentage
 
         """Methods"""
         self.locate_y_axis()
@@ -170,8 +170,8 @@ class ImageParser:
 
     def get_score_mapping(self):
         """Enumerate the bars to convert them into their corresponding raw score"""
-        for raw_score, percentile in enumerate(self.bars.values()):
-            self.score_lookup[raw_score] = percentile
+        for raw_score, percentage in enumerate(self.bars.values()):
+            self.score_lookup[raw_score] = percentage
 
 
 image = ImageParser("pdfs/engineering_21/Internals-page05-img01.png")

@@ -1,6 +1,5 @@
 import os
 import glob
-import traceback
 from pikepdf import Pdf, PdfImage
 from constants import IMAGES_DIRECTORY
 
