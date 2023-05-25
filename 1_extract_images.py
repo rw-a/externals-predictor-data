@@ -4,6 +4,8 @@ from pikepdf import Pdf, PdfImage
 from constants import IMAGES_DIRECTORY
 
 FOLDER_NAME = "pdfs"
+USE_IMAGES_DIRECTORY = True
+
 if not os.path.exists(FOLDER_NAME):
     os.mkdir(FOLDER_NAME)
 
@@ -13,6 +15,7 @@ for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
         year = int("20" + filename[filename.index("_subj_rpt") - 2: filename.index("_subj_rpt")])
         folder_name = filename.replace("snr_", "").replace("_subj_rpt", "").replace(".pdf", "")
         if os.path.exists(folder_name):   # skip if subject has already been analysed
+            print(f"Skipping {filename} since folder {folder_name} already exists.")
             continue
         os.mkdir(folder_name)     # [:-4] removes the .pdf ending
     except:
@@ -21,7 +24,12 @@ for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
 
     pdf = Pdf.open(filename)
 
-    for graph_type, page_number in IMAGES_DIRECTORY[year].items():
+    if USE_IMAGES_DIRECTORY:
+        page_categories = IMAGES_DIRECTORY[year]
+    else:
+        page_categories = {f"Unknown{page_num}": page_num for page_num in range(len(pdf.pages))}
+
+    for graph_type, page_number in page_categories.items():
         page = pdf.pages[page_number - 1]
 
         if len(page.images) < 1:    # if a page has no images, try the previous one instead
