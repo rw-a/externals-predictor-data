@@ -2,7 +2,6 @@ import os
 import csv
 import glob
 import json
-import pprint
 
 import numpy as np
 from PIL import Image
@@ -205,6 +204,10 @@ def main():
 
     # Analyze images for percentile data
     for subject_folder in os.listdir(INPUT_FOLDER_NAME):
+        # Skip hidden folders
+        if subject_folder.startswith("."):
+            continue
+
         subject = subject_folder[:-3]
         is_math_science = (subject in MATH_SCIENCE_SUBJECTS)
         # year = "20" + subject_folder[-2:]
@@ -226,6 +229,11 @@ def main():
 
             data[data_type][subject_folder] = image_parser.score_lookup
 
+        # Checks that each subject appears in Internals, Externals and Total
+        for data_type in data:
+            if subject_folder not in data[data_type]:
+                print(f"WARNING: Subject {subject_folder} not in data for type {data_type}.")
+
     if not os.path.exists(OUTPUT_FOLDER_NAME):
         os.mkdir(OUTPUT_FOLDER_NAME)
 
@@ -242,8 +250,6 @@ def main():
     # Write data to JSON file
     with open(f"{OUTPUT_FOLDER_NAME}/output.json", 'w') as file:
         json.dump(data, file, indent=4)
-
-    pprint.pprint(data)
 
 
 if __name__ == "__main__":
