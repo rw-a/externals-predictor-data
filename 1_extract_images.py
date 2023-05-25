@@ -27,7 +27,7 @@ for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
     if USE_IMAGES_DIRECTORY:
         page_categories = IMAGES_DIRECTORY[year]
     else:
-        page_categories = {f"Unknown{page_num}": page_num for page_num in range(len(pdf.pages))}
+        page_categories = {f"Unknown{page_num}": page_num for page_num in range(1, len(pdf.pages) + 1)}
 
     for graph_type, page_number in page_categories.items():
         page = pdf.pages[page_number - 1]
