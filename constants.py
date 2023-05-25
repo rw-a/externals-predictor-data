@@ -22,8 +22,38 @@ AXIS_INTERVAL_DISTANCE = {
     "Total": 10
 }
 
-# used to verify image analysis. if the graph has a number of intervals that isn't in this list, it read it wrong
-# also maps how many bars there are for each number of intervals
-# note: 11 intervals can also mean 101 bars but we ignore those
-# note: because ZERO exists, must add 1 to both number of intervals and number of bars
+# Used to verify image analysis. If the graph has a number of intervals that
+# isn't in this list, the parser may have analysed it wrongly.
+# Also maps how many bars there are for each number of intervals
+# Note: 11 intervals can also mean 101 bars, but we ignore those
+# Note: because ZERO exists, must add 1 to both number of intervals and number of bars
 NUMBER_OF_INTERVALS = {6: 26, 11: 51, 16: 76}
+
+
+# Subjects which are math or science (i.e. have internals/externals of 50 marks)
+MATH_SCIENCE_SUBJECTS = [
+    "ag_science",
+    "biology",
+    "chemistry",
+    "earth_science",
+    "marine_science",
+    "maths_general",
+    "maths_methods",
+    "maths_specialist",
+    "physics",
+    "psychology"
+]
+
+
+# The number of marks in the internals/externals in a subject
+# Based on whether it is a math/science subject
+NUMBER_OF_MARKS = {
+    True: {     # math/science subjects
+        "Internals": 50,
+        "Externals": 50
+    },
+    False: {    # non-math/science subjects
+        "Internals": 75,
+        "Externals": 25
+    }
+}

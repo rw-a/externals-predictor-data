@@ -3,7 +3,7 @@ import csv
 import glob
 import numpy as np
 from PIL import Image
-from constants import NUMBER_OF_INTERVALS
+from constants import NUMBER_OF_INTERVALS, MATH_SCIENCE_SUBJECTS, NUMBER_OF_MARKS
 
 
 FOLDER_NAME = "pdfs"
@@ -196,7 +196,8 @@ def main():
     data = {"Internals": {}, "Externals": {}, "Total": {}}
 
     for subject_folder in os.listdir(FOLDER_NAME):
-        # subject = subject_folder[:-3]
+        subject = subject_folder[:-3]
+        is_math_science = (subject in MATH_SCIENCE_SUBJECTS)
         # year = "20" + subject_folder[-2:]
         # subject_data = {}
         for image_filename in glob.glob(f"{FOLDER_NAME}/{subject_folder}/*.png"):
@@ -205,8 +206,16 @@ def main():
             if data_type not in data:
                 raise KeyError(f"Data Type {data_type} is not one of 'Internals', 'Externals' or 'Total'")
 
-            image = ImageParser(image_filename)
-            data[data_type][subject_folder] = image.score_lookup
+            image_parser = ImageParser(image_filename)
+
+            if data_type != "Total" \
+                    and NUMBER_OF_INTERVALS[len(image_parser.intervals)] \
+                    != NUMBER_OF_MARKS[is_math_science][data_type] + 1:
+                raise ValueError(f"Number of bars ({NUMBER_OF_INTERVALS[len(image_parser.intervals)]}) "
+                                 f"not what was expected ({NUMBER_OF_MARKS[is_math_science][data_type] + 1}) "
+                                 f"in {image_filename}.")
+
+            data[data_type][subject_folder] = image_parser.score_lookup
 
     print(data)
 
