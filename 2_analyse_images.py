@@ -1,13 +1,18 @@
+import os
 import csv
+import glob
 import numpy as np
 from PIL import Image
 from constants import NUMBER_OF_INTERVALS
 
 
+FOLDER_NAME = "pdfs"
+
+
 class ImageParser:
     def __init__(self, filename: str):
         """Settings"""
-        self.DEBUG = True
+        self.DEBUG = False
 
         self.WHITE_PIXEL = (255, 255, 255)  # index of 0
         self.BLACK_PIXEL = (2, 2, 2)        # index of 1
@@ -174,4 +179,27 @@ class ImageParser:
             self.score_lookup[raw_score] = percentage
 
 
-image = ImageParser("pdfs/engineering_21/Internals-page05-img01.png")
+def main():
+    if not os.path.exists(FOLDER_NAME):
+        raise FileNotFoundError(f"No folder called {FOLDER_NAME} found.")
+
+    data = {"Internals": {}, "Externals": {}, "Total": {}}
+
+    for subject_folder in os.listdir(FOLDER_NAME):
+        # subject = subject_folder[:-3]
+        # year = "20" + subject_folder[-2:]
+        # subject_data = {}
+        for image_filename in glob.glob(f"{FOLDER_NAME}/{subject_folder}/*.png"):
+            # Whether "Internals", "Externals" or "Total"
+            data_type = image_filename.split("/")[-1].split("-")[0]
+            if data_type not in data:
+                raise KeyError(f"Data Type {data_type} is not one of 'Internals', 'Externals' or 'Total'")
+
+            image = ImageParser(image_filename)
+            data[data_type][subject_folder] = image.score_lookup
+
+    print(data)
+
+
+if __name__ == "__main__":
+    main()
