@@ -18,7 +18,15 @@ class ImageParser:
         self.BLACK_PIXEL = (2, 2, 2)        # index of 1
         self.BLUE_PIXEL = (165, 199, 233)  # index of 2
 
+        # A rough guide on how thick the x-axis is
         self.X_AXIS_WIDTH = 4
+        # How rows of consecutive black pixels (with same x position)
+        # need to be counted for it to be considered the y-axis
+        # and vice versa for x-axis
+        self.AXIS_MIN_COUNT = 15
+
+        # Translate the x-axis down this many pixels in case it is not perfectly smooth
+        self.X_AXIS_OFFSET = 1
 
         """Init"""
         self.filename = filename
@@ -88,9 +96,9 @@ class ImageParser:
             # check if there has been many black pixels on the same x-coord (i.e. vertical line = y-axis)
             if len(last_black_pixels) > 0:
                 for x_coord, frequency in last_black_pixels.items():
-                    if frequency > 5:
+                    if frequency > self.AXIS_MIN_COUNT:
                         self.y_axis = x_coord
-                        if self.y_axis / self.image.width > 0.2:
+                        if self.y_axis / self.image.width > 0.2:    # y-axis should be roughly in left-most 20% of image
                             print(f"WARNING: Possibly invalid y-axis position ({self.y_axis}) in {self.filename}")
                         return self.y_axis
 
@@ -112,9 +120,10 @@ class ImageParser:
             # check if there has been many black pixels on the same x-coord (i.e. vertical line = y-axis)
             if len(first_black_pixels) > 0:
                 for y_coord, frequency in first_black_pixels.items():
-                    if frequency > 5:
-                        self.x_axis = y_coord + 1   # +1 because it needs to be the pixel before the first black pixel
-                        if self.x_axis / self.image.height < 0.8:
+                    if frequency > self.AXIS_MIN_COUNT:
+                        self.x_axis = (y_coord + 1  # +1 because it needs to be the pixel before the first black pixel
+                                       + self.X_AXIS_OFFSET)    # extra offset for safety
+                        if self.x_axis / self.image.height < 0.8:   # x-axis should be in roughly bottom 20% of image
                             print(f"WARNING: Possibly invalid x-axis position ({self.x_axis}) in {self.filename}")
                         return self.x_axis
 
@@ -131,7 +140,7 @@ class ImageParser:
             elif pixel != 1:
                 skip_remaining_black_pixels = False
 
-        # TEST
+        # Checks that the intervals are fairly evenly spaced
         differences = np.ediff1d(self.intervals)
         median_diff = np.median(differences)
         for i in differences:
@@ -139,11 +148,12 @@ class ImageParser:
             if discrepancy > 1:
                 print(f"WARNING: Possibly invalid position of interval (discrepancy of {discrepancy}) in {self.filename}")
 
-    def locate_bars(self):
-        """Locates the x-coordinates (center) of each bar"""
+        # Checks that the number of intervals found is valid
         if len(self.intervals) not in NUMBER_OF_INTERVALS:
             print(f"ERROR: Invalid number of intervals ({len(self.intervals)}) in {self.filename}. SKIPPING")
 
+    def locate_bars(self):
+        """Locates the x-coordinates (center) of each bar"""
         num_bars = NUMBER_OF_INTERVALS[len(self.intervals)]
         self.bars_x = np.round(np.linspace(self.intervals[0], self.intervals[-1], num_bars)).astype(int)
 
