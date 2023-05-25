@@ -1,12 +1,17 @@
 import os
 import csv
 import glob
+import json
+import pprint
+
 import numpy as np
 from PIL import Image
 from constants import NUMBER_OF_INTERVALS, MATH_SCIENCE_SUBJECTS, NUMBER_OF_MARKS
 
 
-FOLDER_NAME = "pdfs"
+INPUT_FOLDER_NAME = "pdfs"
+OUTPUT_FOLDER_NAME = "output"
+DEBUG_FOLDER_NAME = "debug"
 
 
 class ImageParser:
@@ -42,6 +47,9 @@ class ImageParser:
         self.bars = {}          # dict mapping x-coordinate (centre) of bars to their percentage (actually decimal)
         self.score_lookup = {}  # dict mapping raw score to percentage
 
+        if self.DEBUG and not os.path.exists(DEBUG_FOLDER_NAME):
+            os.mkdir(DEBUG_FOLDER_NAME)
+
         """Methods"""
         self.locate_y_axis()
         self.locate_x_axis()
@@ -52,7 +60,7 @@ class ImageParser:
         self.get_score_mapping()
 
         if self.DEBUG:
-            with open("lookup.csv", 'w') as file:
+            with open(f"{DEBUG_FOLDER_NAME}/lookup.csv", 'w') as file:
                 writer = csv.writer(file)
                 for percentile in self.score_lookup.values():
                     writer.writerow([percentile])
@@ -71,7 +79,7 @@ class ImageParser:
         quantised_image = self.image_original.quantize(colors=3, palette=image_palette, dither=Image.Dither.NONE)
 
         if self.DEBUG:
-            quantised_image.save("quantised.png")
+            quantised_image.save(f"{DEBUG_FOLDER_NAME}/quantised.png")
 
         return quantised_image
 
@@ -175,7 +183,7 @@ class ImageParser:
             self.bars_height[bar_x] = median_height
 
         if self.DEBUG:
-            self.image.save("bars.png")
+            self.image.save(f"{DEBUG_FOLDER_NAME}/bars.png")
 
     def calculate_bar_percentages(self):
         """Convert height of each bar to percentage"""
@@ -190,17 +198,18 @@ class ImageParser:
 
 
 def main():
-    if not os.path.exists(FOLDER_NAME):
-        raise FileNotFoundError(f"No folder called {FOLDER_NAME} found.")
+    if not os.path.exists(INPUT_FOLDER_NAME):
+        raise FileNotFoundError(f"No folder called {INPUT_FOLDER_NAME} found.")
 
     data = {"Internals": {}, "Externals": {}, "Total": {}}
 
-    for subject_folder in os.listdir(FOLDER_NAME):
+    # Analyze images for percentile data
+    for subject_folder in os.listdir(INPUT_FOLDER_NAME):
         subject = subject_folder[:-3]
         is_math_science = (subject in MATH_SCIENCE_SUBJECTS)
         # year = "20" + subject_folder[-2:]
         # subject_data = {}
-        for image_filename in glob.glob(f"{FOLDER_NAME}/{subject_folder}/*.png"):
+        for image_filename in glob.glob(f"{INPUT_FOLDER_NAME}/{subject_folder}/*.png"):
             # Whether "Internals", "Externals" or "Total"
             data_type = image_filename.split("/")[-1].split("-")[0]
             if data_type not in data:
@@ -217,7 +226,24 @@ def main():
 
             data[data_type][subject_folder] = image_parser.score_lookup
 
-    print(data)
+    if not os.path.exists(OUTPUT_FOLDER_NAME):
+        os.mkdir(OUTPUT_FOLDER_NAME)
+
+    # Write data to CSV files
+    fieldnames = ["Subject"] + list(range(100))
+    for data_type in data:
+        with open(f"{OUTPUT_FOLDER_NAME}/{data_type}.csv", 'w') as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            for subject, subject_data in data[data_type].items():
+                row = {"Subject": subject, **subject_data}
+                writer.writerow(row)
+
+    # Write data to JSON file
+    with open(f"{OUTPUT_FOLDER_NAME}/output.json", 'w') as file:
+        json.dump(data, file, indent=4)
+
+    pprint.pprint(data)
 
 
 if __name__ == "__main__":
