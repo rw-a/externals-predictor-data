@@ -2,15 +2,10 @@ import os
 import csv
 import glob
 import json
-
 import numpy as np
 from PIL import Image
 from constants import NUMBER_OF_INTERVALS, MATH_SCIENCE_SUBJECTS, NUMBER_OF_MARKS
-
-
-INPUT_FOLDER_NAME = "pdfs"
-OUTPUT_FOLDER_NAME = "output"
-DEBUG_FOLDER_NAME = "debug"
+from settings import IMAGES_FOLDER_NAME, OUTPUT_FOLDER_NAME, DEBUG_FOLDER_NAME, JSON_DATA_NAME
 
 
 class ImageParser:
@@ -197,13 +192,13 @@ class ImageParser:
 
 
 def main():
-    if not os.path.exists(INPUT_FOLDER_NAME):
-        raise FileNotFoundError(f"No folder called {INPUT_FOLDER_NAME} found.")
+    if not os.path.exists(IMAGES_FOLDER_NAME):
+        raise FileNotFoundError(f"No folder called {IMAGES_FOLDER_NAME} found.")
 
     data = {"Internals": {}, "Externals": {}, "Total": {}}
 
     # Analyze images for percentile data
-    for subject_folder in os.listdir(INPUT_FOLDER_NAME):
+    for subject_folder in os.listdir(IMAGES_FOLDER_NAME):
         # Skip hidden folders
         if subject_folder.startswith("."):
             continue
@@ -212,7 +207,7 @@ def main():
         is_math_science = (subject in MATH_SCIENCE_SUBJECTS)
         # year = "20" + subject_folder[-2:]
         # subject_data = {}
-        for image_filename in glob.glob(f"{INPUT_FOLDER_NAME}/{subject_folder}/*.png"):
+        for image_filename in glob.glob(f"{IMAGES_FOLDER_NAME}/{subject_folder}/*.png"):
             # Whether "Internals", "Externals" or "Total"
             data_type = image_filename.split("/")[-1].split("-")[0]
             if data_type not in data:
@@ -248,7 +243,7 @@ def main():
                 writer.writerow(row)
 
     # Write data to JSON file
-    with open(f"{OUTPUT_FOLDER_NAME}/output.json", 'w') as file:
+    with open(f"{OUTPUT_FOLDER_NAME}/{JSON_DATA_NAME}.json", 'w') as file:
         json.dump(data, file, indent=4)
 
 

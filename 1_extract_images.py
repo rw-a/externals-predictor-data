@@ -2,15 +2,13 @@ import os
 import glob
 from pikepdf import Pdf, PdfImage
 from constants import IMAGES_DIRECTORY
+from settings import PDFS_FOLDER_NAME, EXTRACT_ALL_IMAGES
 
-FOLDER_NAME = "pdfs"
-USE_IMAGES_DIRECTORY = True
-
-if not os.path.exists(FOLDER_NAME):
-    os.mkdir(FOLDER_NAME)
+if not os.path.exists(PDFS_FOLDER_NAME):
+    os.mkdir(PDFS_FOLDER_NAME)
 
 
-for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
+for filename in glob.glob(f"{PDFS_FOLDER_NAME}/*.pdf"):
     try:
         year = int("20" + filename[filename.index("_subj_rpt") - 2: filename.index("_subj_rpt")])
         folder_name = filename.replace("snr_", "").replace("_subj_rpt", "").replace(".pdf", "")
@@ -24,7 +22,7 @@ for filename in glob.glob(f"{FOLDER_NAME}/*.pdf"):
 
     pdf = Pdf.open(filename)
 
-    if USE_IMAGES_DIRECTORY:
+    if not EXTRACT_ALL_IMAGES:
         page_categories = IMAGES_DIRECTORY[year]
     else:
         page_categories = {f"Unknown{page_num}": page_num for page_num in range(1, len(pdf.pages) + 1)}

@@ -1,0 +1,8 @@
+PDFS_FOLDER_NAME = "pdfs"
+EXTRACT_ALL_IMAGES = False
+
+IMAGES_FOLDER_NAME = "images"
+DEBUG_FOLDER_NAME = "debug"
+OUTPUT_FOLDER_NAME = "output"
+
+JSON_DATA_NAME = "data"
