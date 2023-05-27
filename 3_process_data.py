@@ -28,8 +28,11 @@ for data_type, subjects in data.items():
         # Create a pointer to the appropriate dict
         if data_type == "Internals":
             data_destination = data_internals
-        else:
+        elif data_type == "Externals":
             data_destination = data_externals
+        else:
+            # CURRENTLY SKIPS TOTAL
+            break
 
         if year in data_destination:
             data_destination[year][subject_name] = subject_processed_data
