@@ -33,7 +33,17 @@ with open(f"{OUTPUT_FOLDER_NAME}/externals.json") as file:
             if subject_name not in data[year]:
                 del subjects_by_year[year][subject_name]
 
-
+# Filters subject by year
 for year, subjects in subjects_by_year.items():
     with open(f"{OUTPUT_FOLDER_NAME}/{year}_subjects.json", 'w') as file:
         json.dump(subjects_by_year[year], file)
+
+# Gets every subject
+with open(f"{OUTPUT_FOLDER_NAME}/all_subjects.json", 'w') as file:
+    json.dump(all_subjects, file)
+
+
+math_science_subjects = {subject_code: subject_name for subject_code, subject_name in all_subjects.items()
+                         if subject_code in ['3', '6', '8', '15', '25', '37', '38', '47', '49', '53']}
+with open(f"{OUTPUT_FOLDER_NAME}/math_science_subjects.json", 'w') as file:
+    json.dump(math_science_subjects, file)
