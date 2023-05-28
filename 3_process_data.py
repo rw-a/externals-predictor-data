@@ -6,9 +6,13 @@ Organises the subjects into years.
 Makes the percentages cumulative (like percentiles)
 """
 
+with open(f"{OUTPUT_FOLDER_NAME}/subject_codes.json") as file:
+    SUBJECT_CODES = json.load(file)
+
 
 with open(f"{OUTPUT_FOLDER_NAME}/{JSON_DATA_NAME}.json") as file:
     data = json.load(file)
+
 
 data_internals = {}
 data_externals = {}
@@ -16,6 +20,7 @@ data_externals = {}
 for data_type, subjects in data.items():
     for subject, subject_data in subjects.items():
         subject_name = subject[:-3]
+        subject_code = SUBJECT_CODES[subject_name]
         year = "20" + subject[-2:]
 
         subject_processed_data = {}
@@ -35,9 +40,9 @@ for data_type, subjects in data.items():
             break
 
         if year in data_destination:
-            data_destination[year][subject_name] = subject_processed_data
+            data_destination[year][subject_code] = subject_processed_data
         else:
-            data_destination[year] = {subject_name: subject_processed_data}
+            data_destination[year] = {subject_code: subject_processed_data}
 
 with open(f"{OUTPUT_FOLDER_NAME}/internals.json", 'w') as file:
     json.dump(data_internals, file)

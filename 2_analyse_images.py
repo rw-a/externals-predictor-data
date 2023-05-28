@@ -203,8 +203,8 @@ def main():
         if subject_folder.startswith("."):
             continue
 
-        subject = subject_folder[:-3]
-        is_math_science = (subject in MATH_SCIENCE_SUBJECTS)
+        subject_short_name = subject_folder[:-3]
+        is_math_science = (subject_short_name in MATH_SCIENCE_SUBJECTS)
         # year = "20" + subject_folder[-2:]
         # subject_data = {}
         for image_filename in glob.glob(f"{IMAGES_FOLDER_NAME}/{subject_folder}/*.png"):
@@ -232,6 +232,7 @@ def main():
     if not os.path.exists(OUTPUT_FOLDER_NAME):
         os.mkdir(OUTPUT_FOLDER_NAME)
 
+    """ NOT USED
     # Write data to CSV files
     fieldnames = ["Subject"] + list(range(100))
     for data_type in data:
@@ -241,6 +242,7 @@ def main():
             for subject, subject_data in data[data_type].items():
                 row = {"Subject": subject, **subject_data}
                 writer.writerow(row)
+    """
 
     # Write data to JSON file
     with open(f"{OUTPUT_FOLDER_NAME}/{JSON_DATA_NAME}.json", 'w') as file:

@@ -7,7 +7,7 @@ all_subjects = {}
 with open("subjects.csv") as file:
     reader = csv.reader(file)
     for row in reader:
-        all_subjects[row[1]] = row[2]
+        all_subjects[row[0]] = row[2]
 
 subjects_by_year = {}
 
